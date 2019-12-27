@@ -63,8 +63,8 @@
 
 (defun mathpix-get-result (file)
   "Sends the image to Mathpix API."
-  (interactive "sFile: ")
-  (let* ((image-data (format "data:image/png;base64,%s" (mathpix-get-b64-image file)))
+  (let* ((file-extension (file-name-extension file))
+         (image-data (format "data:image/%s;base64,%s" file-extension (mathpix-get-b64-image file)))
          (command (format mathpix-api-curl-command mathpix-app-id mathpix-app-key image-data))
          (result (shell-command-to-string command))
          (result-json (json-read-from-string result))
