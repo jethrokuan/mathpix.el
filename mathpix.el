@@ -57,8 +57,9 @@
 
 (defun mathpix-get-b64-image (file)
   "Returns the base-64 image string from file."
-  (shell-command-to-string
-   (format "base64 -w 0 %s" file)))
+  (with-temp-buffer
+    (insert-file-contents file)
+    (base64-encode-string (buffer-string) t)))
 
 (defun mathpix-get-result (file)
   "Sends the image to Mathpix API."
