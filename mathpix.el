@@ -1,6 +1,11 @@
 ;;; mathpix.el --- Mathpix API from Emacs
 
 ;;; Commentary:
+;; This package provides an interface similar to the Mathpix snipping tool.
+;;
+;; mathpix-screenshot prompts for a screenshot, which is sent for processing
+;; via Mathpix's API.
+;;
 ;;  Heavily adapted from org-download.
 
 (require 'json)
@@ -11,6 +16,7 @@
 (defcustom mathpix-app-key nil
   "App key for Mathpix.")
 
+;; From org-download
 (defcustom mathpix-screenshot-method "gnome-screenshot -a -f %s"
   "The tool to capture screenshots."
   :type '(choice
@@ -43,6 +49,9 @@
   "curl -s https://api.mathpix.com/v3/latex -X POST -H \"app_id: %s\" -H \"app_key: %s\" -H \"Content-Type: application/json\" --data \"{\\\"src\\\":\\\"%s\\\",\\\"formats\\\": [\\\"latex_styled\\\"],\\\"format_options\\\":{\\\"latex_styled\\\": {\\\"transforms\\\": [\\\"rm_spaces\\\"]}}}\""
   "The shell executable command to retrieve the results.")
 
+;; screenshot programs have exit-code of 0 even when screenshotting is cancelled.
+;; To save API calls, we use the existence of the file as a check if the user
+;; wants to continue. Hence, we must delete the file after each function call.
 (defun mathpix-screenshot ()
   "Capture screenshot and send result to Mathpix API."
   (interactive)
@@ -51,9 +60,11 @@
     (if (functionp mathpix-screenshot-method)
         (funcall mathpix-screenshot-file mathpix-screenshot-file)
       (shell-command-to-string
-       (format mathpix-screenshot-method mathpix-screenshot-file))
-      (let ((latex (mathpix-get-result mathpix-screenshot-file)))
-        (insert latex)))))
+       (format mathpix-screenshot-method mathpix-screenshot-file)))
+    (when (file-exists-p mathpix-screenshot-file)
+      (insert (mathpix-get-result mathpix-screenshot-file))
+      (delete-file mathpix-screenshot-file))))
+
 
 (defun mathpix-get-b64-image (file)
   "Returns the base-64 image string from file."
