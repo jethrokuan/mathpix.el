@@ -1,0 +1,16 @@
+* Mathpix.el
+
+[[file:screenshots/mathpix.gif]]
+
+Emacs interface to Mathpix. Requires a Mathpix app id and key. Example
+package setup:
+
+#+begin_src emacs-lisp
+  (use-package mathpix.el
+    :straight (:host github :repo "jethrokuan/mathpix.el")
+    :custom ((mathpix-app-id "app-id")
+             (mathpix-app-key "app-key"))
+    :bind
+    ("C-x m" . mathpix-screenshot))
+
+#+end_src
