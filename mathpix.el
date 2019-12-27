@@ -66,10 +66,13 @@
   (let* ((file-extension (file-name-extension file))
          (image-data (format "data:image/%s;base64,%s" file-extension (mathpix-get-b64-image file)))
          (command (format mathpix-api-curl-command mathpix-app-id mathpix-app-key image-data))
-         (result (shell-command-to-string command))
-         (result-json (json-read-from-string result))
-         (latex (assoc-default 'latex_styled result-json)))
-    latex))
+         (result (json-read-from-string (shell-command-to-string command))))
+    (let ((error (assoc-default 'error result)))
+      (if error
+          (progn
+            (message "%s" error)
+            "")
+        (assoc-default 'latex_styled result)))))
 
 (provide 'mathpix)
 
