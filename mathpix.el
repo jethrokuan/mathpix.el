@@ -58,7 +58,7 @@
   (let ((default-directory "~"))
     (make-directory (file-name-directory mathpix-screenshot-file) t)
     (if (functionp mathpix-screenshot-method)
-        (funcall mathpix-screenshot-file mathpix-screenshot-file)
+        (funcall mathpix-screenshot-method mathpix-screenshot-file)
       (shell-command-to-string
        (format mathpix-screenshot-method mathpix-screenshot-file)))
     (when (file-exists-p mathpix-screenshot-file)
