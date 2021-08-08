@@ -1,5 +1,31 @@
 ;;; mathpix.el --- Mathpix API from Emacs
 
+;; Copyright © 2020-2021 Jethro Kuan <jethrokuan95@gmail.com>
+
+;; Author: Jethro Kuan <jethrokuan95@gmail.com>
+;; URL: https://github.com/jethrokuan/mathpix.el
+;; Keywords: latex, convenience
+;; Version: 0.1.0
+;; Package-Requires: ((emacs "26.0") (request "0.3.2"))
+
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
 ;;; Commentary:
 ;; This package provides an interface similar to the Mathpix snipping tool.
 ;;
@@ -9,14 +35,26 @@
 ;;  Heavily adapted from org-download.
 ;;
 ;; Depends on the request library.
+;;; Code:
 
 (require 'json)
+(require 'request)
+(require 'cl-lib)
+
+(defgroup mathpix nil
+  "Convert screenshots to LaTeX equations."
+  :group nil
+  :prefix "mathpix-")
 
 (defcustom mathpix-app-id nil
-  "App ID for Mathpix.")
+  "App ID for Mathpix."
+  :group 'mathpix
+  :type 'string)
 
 (defcustom mathpix-app-key nil
-  "App key for Mathpix.")
+  "App key for Mathpix."
+  :group 'mathpix
+  :type 'string)
 
 ;; From org-download
 (defcustom mathpix-screenshot-method "gnome-screenshot -a -f %s"
@@ -40,12 +78,14 @@
                  "xclip -selection clipboard -t image/png -o > %s")
           ;; take an image that is already on the clipboard, for Windows
           (const :tag "imagemagick/convert" "convert clipboard: %s")
-          (function :tag "Custom function")))
+          (function :tag "Custom function"))
+  :group 'mathpix)
 
 (defcustom mathpix-screenshot-file
   (expand-file-name "mathpix.png" temporary-file-directory)
-  "The file to capture mathpix screenshots"
-  :type 'string)
+  "The file to capture mathpix screenshots to."
+  :type 'string
+  :group 'mathpix)
 
 ;; screenshot programs have exit-code of 0 even when screenshotting is cancelled.
 ;; To save API calls, we use the existence of the file as a check if the user
@@ -63,17 +103,14 @@
       (mathpix-insert-result mathpix-screenshot-file)
       (delete-file mathpix-screenshot-file))))
 
-
 (defun mathpix-get-b64-image (file)
-  "Returns the base-64 image string from file."
+  "Return the base-64 image string from FILE."
   (with-temp-buffer
     (insert-file-contents file)
     (base64-encode-string (buffer-string) t)))
 
-
 (defun mathpix-insert-result (file)
-  "Sends the image to Mathpix API."
-  (require 'request)
+  "Sends FILE to Mathpix API."
   (request
     "https://api.mathpix.com/v3/latex"
     :type "POST"
