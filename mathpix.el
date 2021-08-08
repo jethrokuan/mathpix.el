@@ -7,6 +7,8 @@
 ;; via Mathpix's API.
 ;;
 ;;  Heavily adapted from org-download.
+;;
+;; Depends on the request library.
 
 (require 'json)
 
@@ -45,10 +47,6 @@
   "The file to capture mathpix screenshots"
   :type 'string)
 
-(defconst mathpix-api-curl-command
-  "curl -s https://api.mathpix.com/v3/latex -X POST -H \"app_id: %s\" -H \"app_key: %s\" -H \"Content-Type: application/json\" --data \"{\\\"src\\\":\\\"%s\\\",\\\"formats\\\": [\\\"latex_styled\\\"],\\\"format_options\\\":{\\\"latex_styled\\\": {\\\"transforms\\\": [\\\"rm_spaces\\\"]}}}\""
-  "The shell executable command to retrieve the results.")
-
 ;; screenshot programs have exit-code of 0 even when screenshotting is cancelled.
 ;; To save API calls, we use the existence of the file as a check if the user
 ;; wants to continue. Hence, we must delete the file after each function call.
@@ -62,7 +60,7 @@
       (shell-command-to-string
        (format mathpix-screenshot-method mathpix-screenshot-file)))
     (when (file-exists-p mathpix-screenshot-file)
-      (insert (mathpix-get-result mathpix-screenshot-file))
+      (mathpix-insert-result mathpix-screenshot-file)
       (delete-file mathpix-screenshot-file))))
 
 
@@ -72,18 +70,31 @@
     (insert-file-contents file)
     (base64-encode-string (buffer-string) t)))
 
-(defun mathpix-get-result (file)
+
+(defun mathpix-insert-result (file)
   "Sends the image to Mathpix API."
-  (let* ((file-extension (file-name-extension file))
-         (image-data (format "data:image/%s;base64,%s" file-extension (mathpix-get-b64-image file)))
-         (command (format mathpix-api-curl-command mathpix-app-id mathpix-app-key image-data))
-         (result (json-read-from-string (shell-command-to-string command))))
-    (let ((error (assoc-default 'error result)))
-      (if error
-          (progn
-            (message "%s" error)
-            "")
-        (assoc-default 'latex_styled result)))))
+  (require 'request)
+  (request
+    "https://api.mathpix.com/v3/latex"
+    :type "POST"
+    :headers `(("app_id" . ,mathpix-app-id)
+               ("app_key" . ,mathpix-app-key)
+               ("Content-type" . "application/json"))
+    :data (json-encode-alist
+           `(("src" . ,(format "data:image/%s;base64,%s"
+                               (file-name-extension file)
+                               (mathpix-get-b64-image file)))
+             ("formats" . ,(list "latex_styled"))
+             ("format_options" .
+              ,`(("latex_styled" .
+                  ,`(("transforms" .
+                      (cons "rm_spaces" '()))))))))
+    :parser 'json-read
+    :sync t
+    :complete (cl-function
+               (lambda (&key response &allow-other-keys)
+                 (insert
+                  (alist-get 'latex_styled (request-response-data response)))))))
 
 (provide 'mathpix)
 
